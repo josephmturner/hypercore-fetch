@@ -516,6 +516,7 @@ export default async function makeHyperFetch ({
 
     const accept = request.headers.get('Accept') || ''
     const isRanged = request.headers.get('Range') || ''
+    const showDownloaded = request.headers.get('X-Show-Downloaded') || ''
     const noResolve = searchParams.has('noResolve')
 
     const parts = pathname.split('/')
@@ -526,7 +527,7 @@ export default async function makeHyperFetch ({
 
     const snapshot = await drive.checkout(version)
 
-    return serveHead(snapshot, realPath, { accept, isRanged, noResolve })
+    return serveHead(snapshot, realPath, { accept, isRanged, showDownloaded, noResolve })
   }
 
   async function headFiles (request) {
@@ -536,14 +537,15 @@ export default async function makeHyperFetch ({
 
     const accept = request.headers.get('Accept') || ''
     const isRanged = request.headers.get('Range') || ''
+    const showDownloaded = request.headers.get('X-Show-Downloaded') || ''
     const noResolve = searchParams.has('noResolve')
 
     const drive = await getDrive(`hyper://${hostname}/`, true)
 
-    return serveHead(drive, pathname, { accept, isRanged, noResolve })
+    return serveHead(drive, pathname, { accept, isRanged, showDownloaded, noResolve })
   }
 
-  async function serveHead (drive, pathname, { accept, isRanged, noResolve }) {
+  async function serveHead (drive, pathname, { accept, isRanged, showDownloaded, noResolve }) {
     const isDirectory = pathname.endsWith('/')
     const fullURL = new URL(pathname, drive.url).href
 
@@ -622,6 +624,12 @@ export default async function makeHyperFetch ({
     if (entry?.value?.metadata?.mtime) {
       const date = new Date(entry.value.metadata.mtime)
       resHeaders[HEADER_LAST_MODIFIED] = date.toUTCString()
+    }
+
+    if (showDownloaded) {
+      // console.log('no storage', await drive.db.feed.info())
+      // console.log('storage: true', await drive.db.feed.info({ storage: true }))
+      console.log('storage: true', await drive.blobs.core)
     }
 
     const size = entry.value.blob.byteLength
@@ -858,4 +866,9 @@ function getMimeType (path) {
 
 function ensureLeadingSlash (path) {
   return path.startsWith('/') ? path : '/' + path
+}
+
+function calculateSize (info) {
+  // Copied from holepunchto drives info.js
+  return info.storage.oplog + info.storage.tree + info.storage.blocks + info.storage.bitfield
 }

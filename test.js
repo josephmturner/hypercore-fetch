@@ -137,6 +137,30 @@ test('HEAD request', async (t) => {
   t.match(headersLink, /^<hyper:\/\/[0-9a-z]{52}\/example.txt>; rel="canonical"$/, 'Link header includes both public key and path.')
 })
 
+test.only('HEAD request with X-Show-Downloaded', async (t) => {
+  const created = await nextURL(t)
+  const uploadLocation = new URL('./example.txt', created)
+  await fetch(uploadLocation, { method: 'put', body: SAMPLE_CONTENT })
+  await fetch(new URL('./example.txt2', created), { method: 'put', body: SAMPLE_CONTENT })
+  await fetch(new URL('./example.txt3', created), { method: 'put', body: SAMPLE_CONTENT })
+  await fetch(new URL('./example.txt4', created), { method: 'put', body: SAMPLE_CONTENT })
+  await fetch(new URL('./example.txt5', created), { method: 'put', body: SAMPLE_CONTENT })
+
+  const headResponse = await fetch(uploadLocation, {
+    method: 'head',
+    headers: {
+      'X-Show-Downloaded': 'true'
+    }
+  })
+
+  await checkResponse(headResponse, t, 'Able to load HEAD')
+
+  // const headersEtag = headResponse.headers.get('Etag')
+
+  // t.equal(headResponse.status, 204, 'Response had expected status')
+  // t.equal(headersEtag, '2', 'Headers got expected etag')
+})
+
 test('PUT file', async (t) => {
   const created = await nextURL(t)
 
